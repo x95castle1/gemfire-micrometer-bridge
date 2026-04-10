@@ -7,6 +7,8 @@ import org.apache.geode.cache.client.ClientCache;
 import org.apache.geode.distributed.internal.InternalDistributedSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -24,7 +26,9 @@ public class GemFireMicrometerBridge {
     private final MeterRegistry registry;
     private final Set<String> bound = new HashSet<>();
 
-    @Value("#{${gemfire.metrics.export:{}}}")
+//    @Value("#{${gemfire.metrics.bridge.export:{}}}")
+    @Autowired
+    @Qualifier("GemFireMetricBridgeProperty")
     private Map<String, String> exportConfig;
 
     public GemFireMicrometerBridge(ClientCache clientCache, MeterRegistry registry) {
@@ -84,7 +88,7 @@ public class GemFireMicrometerBridge {
         if (!bound.add(meterKey)) return;
 
         String meterName = sanitize("gemfire." + typeName + "." + d.getName());
-        Tags tags = Tags.of("type", typeName, "textId", stats.getTextId() == null ? "default" : stats.getTextId());
+        Tags tags = Tags.of("category", typeName, "name", stats.getTextId() == null ? "default" : stats.getTextId());
 
         if (d.isCounter()) {
             FunctionCounter.builder(meterName, stats, s -> s.get(d).doubleValue()).tags(tags).register(registry);
