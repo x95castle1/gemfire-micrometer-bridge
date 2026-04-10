@@ -1,6 +1,10 @@
 package com.vmware.tanzu.gemfire.starter;
 
-import io.micrometer.core.instrument.*;
+import io.micrometer.core.instrument.FunctionCounter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tags;
+import jakarta.annotation.PostConstruct;
 import org.apache.geode.StatisticDescriptor;
 import org.apache.geode.Statistics;
 import org.apache.geode.cache.client.ClientCache;
@@ -25,22 +29,28 @@ public class GemFireMicrometerBridge {
     private final ClientCache clientCache;
     private final MeterRegistry registry;
     private final Set<String> bound = new HashSet<>();
-
-//    @Value("#{${gemfire.metrics.bridge.export:{}}}")
+    @Value("${gemfire.metrics.bridge.rescan-interval:30000}")
+    private long rescanInterval;
     @Autowired
-    @Qualifier("GemFireMetricBridgeProperty")
+    @Qualifier("gemfireBridgeExports")
     private Map<String, String> exportConfig;
 
     public GemFireMicrometerBridge(ClientCache clientCache, MeterRegistry registry) {
-        log.info("Enabling GemFireMicroMeterBridge");
         this.clientCache = clientCache;
         this.registry = registry;
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    public void initialBind() { rescan(); }
+    public void initialBind() {
+        rescan();
+    }
 
-    @Scheduled(fixedDelayString = "${gemfire.metrics.rescan-interval:30000}")
+    @PostConstruct
+    public void init() {
+        log.info("GemFireMicroMeterBridge enabled - rescan-interval: {} exports: {}", rescanInterval, exportConfig);
+    }
+
+    @Scheduled(fixedDelayString = "${gemfire.metrics.bridge.rescan-interval:30000}")
     public void rescan() {
         if (exportConfig.isEmpty()) return;
         try {
