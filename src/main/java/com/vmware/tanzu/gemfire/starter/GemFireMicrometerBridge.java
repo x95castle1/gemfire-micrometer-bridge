@@ -28,6 +28,7 @@ public class GemFireMicrometerBridge {
     private Map<String, String> exportConfig;
 
     public GemFireMicrometerBridge(ClientCache clientCache, MeterRegistry registry) {
+        log.info("Enabling GemFireMicroMeterBridge");
         this.clientCache = clientCache;
         this.registry = registry;
     }
