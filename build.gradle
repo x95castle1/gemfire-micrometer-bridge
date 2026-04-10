@@ -1,0 +1,81 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    // We keep 'apply false' so it doesn't try to make an executable JAR
+    id 'org.springframework.boot' version '3.5.10' apply false
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+apply plugin: 'maven-publish'
+
+group = 'com.vmware.tanzu'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+}
+
+ext {
+    SPRING_GEMFIRE_VERSION="2.0.4"
+    GEMFIRE_VERSION="10.1.0"
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        credentials {
+            username = System.getenv("GEMFIRE_ARTIFACTORY_USERNAME")
+            password = System.getenv("GEMFIRE_ARTIFACTORY_PASSWORD")
+        }
+        url = uri("https://packages.broadcom.com/artifactory/gemfire/")
+    }
+}
+
+// This block is the "magic" that fixes your 'Could not resolve' error
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.boot:spring-boot-dependencies:3.5.10"
+    }
+}
+
+dependencies {
+    // Now these will resolve because the BOM above provides the versions
+    compileOnly 'org.springframework.boot:spring-boot-starter'
+    compileOnly 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Check your specific GemFire/Geode version here
+    compileOnly "com.vmware.gemfire:gemfire-core:$GEMFIRE_VERSION"
+
+    compileOnly 'io.micrometer:micrometer-core'
+    compileOnly 'org.slf4j:slf4j-api'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            groupId = 'com.vmware.tanzu'
+            artifactId = 'gemfire-micrometer-starter'
+            version = '1.0.0'
+
+            // This tells Gradle to skip the 'dependency-management' metadata check
+            // that is causing the build to fail on version-less dependencies.
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+            }
+        }
+    }
+}
+
+// This kills the 'dependencies-without-versions' error once and for all
+tasks.withType(GenerateModuleMetadata).configureEach {
+    enabled = false
+}
