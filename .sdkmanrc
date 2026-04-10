@@ -1,0 +1,2 @@
+# Enable auto-env in your ~/.sdkman/etc/config to switch automatically
+java=17.0.18-librca
