@@ -7,6 +7,16 @@ SHELL := /usr/bin/env bash
 build: ## build library
 	@./gradlew build
 
+.PHONY: test
+test: ## run unit tests
+	@./gradlew test
+
+.PHONY: coverage
+coverage: ## run tests and open coverage report
+	@./gradlew test jacocoTestReport
+	@echo "Report: build/reports/jacoco/test/html/index.html"
+	@open build/reports/jacoco/test/html/index.html
+
 .PHONY: publish
 publish: ## install library into local .m2/repo
 	@./gradlew publishToMavenLocal
