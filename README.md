@@ -3,13 +3,12 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen)](https://spring.io/projects/spring-boot)
 [![GemFire](https://img.shields.io/badge/GemFire-10.x-blue)](https://tanzu.vmware.com/gemfire)
 
-A high-performance, opt-in Spring Boot Starter that bridges **Apache Geode/VMware GemFire** internal statistics into the **Micrometer** ecosystem. Surface your client-side latency, pool usage, and cache performance metrics directly to **Prometheus** and **JMX** with zero boilerplate.
+A Spring Boot Starter that bridges **VMware by Broadcom GemFire** internal statistics into the **Micrometer** ecosystem. Surface your client-side latency, pool usage, and cache performance metrics directly to **Prometheus** and **JMX** with zero boilerplate.
 
 ---
 
 ## 🚀 Features
 
-* **Opt-in Activation**: Use `@EnableGemFireMicrometerBridge` to activate only where needed.
 * **Dynamic Rescanning**: Automatically detects new Regions, Pools, or CQs created after application startup.
 * **Regex Filtering**: Fine-grained control over which `StatisticsTypes`, `Instances`, and `Descriptors` are exported via standard properties.
 * **Smart Mapping**: Automatically converts GemFire Counters to Micrometer `FunctionCounters` and Gauges to standard `Gauges`.
@@ -20,15 +19,16 @@ A high-performance, opt-in Spring Boot Starter that bridges **Apache Geode/VMwar
 ## 📦 Installation
 
 ### 1. Build and Publish
-In the root of the bridge library project, run:
-```bash
-./gradlew clean publishToMavenLocal
+
+In the root of the gemfire-micrometer-bridge  project, run:
+```makefile
+make publish
 ```
 
-### 2. Add Dependency
+### 2. Add Dependency to GemFire client
 Add the following to your GemFire Client application's build.gradle:
 
-```
+```json
 dependencies {
     implementation 'com.vmware.tanzu:gemfire-micrometer-starter:1.0.0'
     
@@ -37,67 +37,103 @@ dependencies {
     implementation 'io.micrometer:micrometer-registry-jmx'
 }
 ```
+or Pom.xml if you love Maven!
+```xml
+<dependencies>
+    <dependency>
+        <groupId>com.vmware.tanzu</groupId>
+        <artifactId>gemfire-micrometer-starter</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+
+    <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+    
+    <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-registry-jmx</artifactId>
+    </dependency>
+</dependencies>
+```
 
 ## 🛠 Usage
-### 1. Enable the Bridge
-Annotate your main Spring Boot Application class or a Configuration class to activate the bridge:
-
-```
-Java
-@SpringBootApplication
-@EnableGemFireMicrometerBridge // <--- Activates the bridge logic
-public class GemFireClientApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(GemFireClientApplication.class, args);
-    }
-}
-```
-
-### 2. Configure Metrics
+### 1. Configure Metrics
 Control exactly what gets exported via application.properties.
-Format: 'TypeRegex' : 'InstanceRegex | Stat1,Stat2,Stat3'
+* **Format:** 'TypeRegex' : 'StatNameRegex | Stat1,Stat2,Stat3'
+* **Default:** "CachePerfStats", "cachePerfStats|gets,getTime,puts,putTime"
 
-## Properties
+```properties
+# application.properties 
+
+# example to only select gets,puts,putTime,getTime metrics for the stat type of RegionStats-Example
+gemfire.metrics.export={ \
+  'CachePerfStats': 'RegionStats-Example|gets,puts,putTime,getTime' \
+}
+
+# multi-stat example to pull all stats for type of CachePerfStats, PoolStats, and ClientStats
+gemfire.metrics.export={ \
+  'CachePerfStats': '.*|.*', \
+  'PoolStats': '.*|.*', \
+  'ClientStats': '.*|.*' \
+}
+
+# single line example to pull all metrics for type of CachePerfStats
+gemfire.metrics.bridge.export.CachePerfStats=.*|.*
+```
+
+
+## Additional Properties
+You can adjust the rescanning of statistics or disable the bridge entirely via the application.properties with the following properties:
 
 ```
 # Global Toggle & Rescan Interval
 gemfire.metrics.bridge.enabled=true
 gemfire.metrics.rescan-interval=30000
 
-# Backend Toggles
+# Micrometer Toggles
 management.jmx.metrics.export.enabled=true
 management.prometheus.metrics.export.enabled=true
 
-# Export Configuration (Map syntax for .properties)
-gemfire.metrics.export={ \
-  'CachePerfStats': 'RegionStats-MarketPrices|gets,puts,putTime,getTime', \
-  'PoolStats': '.*|connections,activeConnects', \
-  'ClientStats': '.*|sentBytes,receivedBytes' \
-}
 ```
 
 ## 🔍 Observability
-Prometheus
-Metrics are available at the standard Actuator endpoint. Prometheus automatically treats . in the name as _ for compatibility.
+### Prometheus 
+
+Prometheus Metrics are available at the standard SpringBoot Actuator endpoint. Prometheus automatically treats . in the statistic name as _ for compatibility.
 ```
-GET /actuator/prometheus
+curl http://<your-app>/actuator/prometheus | grep -i gemfire_
 ```
 
 Example Output:
 
 ```Plaintext
-gemfire_cacheperfstats_gets_total{textId="RegionStats-MarketPrices",type="CachePerfStats"} 1250.0
-gemfire_cacheperfstats_puttime_seconds_count{textId="RegionStats-MarketPrices",type="CachePerfStats"} 450.0
+# HELP gemfire_cacheperfstats_gets_total  
+# TYPE gemfire_cacheperfstats_gets_total counter
+gemfire_cacheperfstats_gets_total{category="CachePerfStats",name="cachePerfStats"} 3567.0
+
+# HELP gemfire_cacheperfstats_gettime_total  
+# TYPE gemfire_cacheperfstats_gettime_total counter
+gemfire_cacheperfstats_gettime_total{category="CachePerfStats",name="cachePerfStats"} 2.591725656E9
+
+# HELP gemfire_cacheperfstats_puts_total  
+# TYPE gemfire_cacheperfstats_puts_total counter
+gemfire_cacheperfstats_puts_total{category="CachePerfStats",name="cachePerfStats"} 7247.0
+
+# HELP gemfire_cacheperfstats_puttime_total  
+# TYPE gemfire_cacheperfstats_puttime_total counter
+gemfire_cacheperfstats_puttime_total{category="CachePerfStats",name="cachePerfStats"} 4.203863011E9
 ```
 
-JMX (JConsole / VisualVM)
-Metrics are pushed to the MBean server under the metrics domain. 
+### JMX (JConsole / VisualVM)
+Metrics are pushed to the MBean server under the metrics domain. <br>
+
+TODO: Add in a cool picture
 
 ## 🛠 Troubleshooting
-Empty Map: If your debug logs show exportConfig is {}, check the single quotes and backslashes in your .properties file.
+**Log Levels:** DEBUG and TRACE Logging Levels are supported. 
 
-Missing Stats: Ensure @EnableStatistics is active on your client cache and spring.data.gemfire.stats.enable-statistics=true is set.
+**Regex Debugging:** Set logging.level.com.vmware.tanzu.gemfire.starter=DEBUG to see exactly which metric Type and Names the bridge is finding during its rescan.
 
-Regex Debugging: Set logging.level.com.vmware.tanzu.gemfire.starter=DEBUG to see exactly which textId and typeName the bridge is finding during its rescan.
-
-Developed with ☕ and 🤘 for the GemFire Community.
+**Empty Map:** If your debug logs show exportConfig is {}, check the single quotes and backslashes in your application.properties file.

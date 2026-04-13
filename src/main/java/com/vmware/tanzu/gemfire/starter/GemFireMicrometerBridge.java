@@ -19,6 +19,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -52,20 +53,34 @@ public class GemFireMicrometerBridge {
 
     @Scheduled(fixedDelayString = "${gemfire.metrics.bridge.rescan-interval:30000}")
     public void rescan() {
-        if (exportConfig.isEmpty()) return;
+        if (exportConfig.isEmpty()) {
+            log.debug("Rescan skipped: exportConfig is empty.");
+            return;
+        }
+
+        log.debug("Starting GemFire statistics rescan...");
+        int matchCount = 0;
+
         try {
             InternalDistributedSystem ids = (InternalDistributedSystem) clientCache.getDistributedSystem();
-            for (Statistics stats : ids.getStatisticsManager().getStatsList()) {
+            List<Statistics> statsList = ids.getStatisticsManager().getStatsList();
+
+            log.trace("Found {} total GemFire statistics instances to evaluate.", statsList.size());
+
+            for (Statistics stats : statsList) {
                 String typeName = stats.getType().getName();
-                // Check if the typeName matches any regex key in our config
                 for (Map.Entry<String, String> entry : exportConfig.entrySet()) {
                     if (Pattern.matches(entry.getKey(), typeName)) {
+                        log.trace("Type match found: '{}' matches filter '{}'", typeName, entry.getKey());
                         processStatisticsInstance(stats, entry.getValue());
+                        matchCount++;
                     }
                 }
             }
+            log.debug("Rescan complete. Processed {} matching statistic types. Total unique meters bound: {}",
+                    matchCount, bound.size());
         } catch (Exception e) {
-            log.warn("GemFire Micrometer bridge rescan failed", e);
+            log.error("GemFire Micrometer bridge rescan failed unexpectedly", e);
         }
     }
 
@@ -76,7 +91,10 @@ public class GemFireMicrometerBridge {
         String statsRegex = parts.length > 1 ? parts[1] : parts[0];
 
         if (Pattern.matches(instanceRegex, textId)) {
+            log.debug("Instance match: '{}' matches instance filter '{}'. Scanning descriptors...", textId, instanceRegex);
             bindMatchedStats(stats, statsRegex);
+        } else {
+            log.trace("Instance skip: '{}' did not match filter '{}'", textId, instanceRegex);
         }
     }
 
@@ -95,15 +113,32 @@ public class GemFireMicrometerBridge {
     private void registerMeter(Statistics stats, StatisticDescriptor d) {
         String typeName = stats.getType().getName();
         String meterKey = typeName + "#" + stats.getUniqueId() + "#" + d.getName();
-        if (!bound.add(meterKey)) return;
+
+        if (!bound.add(meterKey)) {
+            // Already bound, no log needed unless you're deep-diving (TRACE)
+            return;
+        }
 
         String meterName = sanitize("gemfire." + typeName + "." + d.getName());
+        log.debug("Registering new meter: {} (Tags: category={}, name={})",
+                meterName, typeName, stats.getTextId());
+
         Tags tags = Tags.of("category", typeName, "name", stats.getTextId() == null ? "default" : stats.getTextId());
 
-        if (d.isCounter()) {
-            FunctionCounter.builder(meterName, stats, s -> s.get(d).doubleValue()).tags(tags).register(registry);
-        } else {
-            Gauge.builder(meterName, stats, s -> s.get(d).doubleValue()).tags(tags).register(registry);
+        try {
+            if (d.isCounter()) {
+                FunctionCounter.builder(meterName, stats, s -> s.get(d).doubleValue())
+                        .tags(tags)
+                        .description(d.getDescription())
+                        .register(registry);
+            } else {
+                Gauge.builder(meterName, stats, s -> s.get(d).doubleValue())
+                        .tags(tags)
+                        .description(d.getDescription())
+                        .register(registry);
+            }
+        } catch (Exception e) {
+            log.error("Failed to register meter '{}': {}", meterName, e.getMessage());
         }
     }
 
