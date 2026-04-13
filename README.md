@@ -68,16 +68,12 @@ Control exactly what gets exported via application.properties.
 # application.properties 
 
 # example to only select gets,puts,putTime,getTime metrics for the stat type of RegionStats-Example
-gemfire.metrics.export={ \
-  'CachePerfStats': 'RegionStats-Example|gets,puts,putTime,getTime' \
-}
+gemfire.metrics.bridge.export.CachePerfStats=RegionStats-Example|gets,puts,putTime,getTime
 
 # multi-stat example to pull all stats for type of CachePerfStats, PoolStats, and ClientStats
-gemfire.metrics.export={ \
-  'CachePerfStats': '.*|.*', \
-  'PoolStats': '.*|.*', \
-  'ClientStats': '.*|.*' \
-}
+gemfire.metrics.bridge.export.CachePerfStats=.*|.*
+gemfire.metrics.bridge.export.PoolStats=.*|.*
+gemfire.metrics.bridge.export.ClientStats=.*|.*
 
 # single line example to pull all metrics for type of CachePerfStats
 gemfire.metrics.bridge.export.CachePerfStats=.*|.*
