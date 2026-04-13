@@ -28,11 +28,11 @@ make publish
 ### 2. Add Dependency to GemFire client
 Add the following to your GemFire Client application's build.gradle:
 
-```json
+```bash
 dependencies {
     implementation 'com.vmware.tanzu:gemfire-micrometer-starter:1.0.0'
     
-    // Micrometer registries for your desired backends
+    # Micrometer registries for your desired backends
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.micrometer:micrometer-registry-jmx'
 }
@@ -87,7 +87,7 @@ gemfire.metrics.bridge.export.CachePerfStats=.*|.*
 ## Additional Properties
 You can adjust the rescanning of statistics or disable the bridge entirely via the application.properties with the following properties:
 
-```
+```properties
 # Global Toggle & Rescan Interval
 gemfire.metrics.bridge.enabled=true
 gemfire.metrics.rescan-interval=30000
@@ -102,13 +102,13 @@ management.prometheus.metrics.export.enabled=true
 ### Prometheus 
 
 Prometheus Metrics are available at the standard SpringBoot Actuator endpoint. Prometheus automatically treats . in the statistic name as _ for compatibility.
-```
+```bash
 curl http://<your-app>/actuator/prometheus | grep -i gemfire_
 ```
 
 Example Output:
 
-```Plaintext
+```bash
 # HELP gemfire_cacheperfstats_gets_total  
 # TYPE gemfire_cacheperfstats_gets_total counter
 gemfire_cacheperfstats_gets_total{category="CachePerfStats",name="cachePerfStats"} 3567.0
