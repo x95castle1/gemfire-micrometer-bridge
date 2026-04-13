@@ -1,14 +1,14 @@
 package com.vmware.tanzu.gemfire.starter;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import java.util.HashMap;
 import java.util.Map;
 
-@ConfigurationProperties(prefix = "gemfire.metrics.bridge")
 public class GemFireMetricBridgeProperties {
 
-    private Map<String, String> export = new HashMap<>();
+    private Map<String, String> export = new HashMap<>(
+            Map.of("CachePerfStats", "cachePerfStats|gets,getTime,puts,putTime")
+    );
+    private Long rescanInterval = 60000L;
 
     public Map<String, String> getExport() {
         return export;
@@ -18,4 +18,11 @@ public class GemFireMetricBridgeProperties {
         this.export = export;
     }
 
+    public Long getRescanInterval() {
+        return rescanInterval;
+    }
+
+    public void setRescanInterval(Long rescanInterval) {
+        this.rescanInterval = rescanInterval;
+    }
 }

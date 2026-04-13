@@ -20,8 +20,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GemFireMicrometerBridgeTest {
@@ -38,7 +45,7 @@ class GemFireMicrometerBridgeTest {
         registry = new SimpleMeterRegistry();
         distributedSystem = mock(InternalDistributedSystem.class);
         statisticsManager = mock(StatisticsManager.class);
-        bridge = new GemFireMicrometerBridge(clientCache, registry);
+        bridge = new GemFireMicrometerBridge(clientCache, registry, new GemFireMetricBridgeProperties());
     }
 
     private void wireUpStatisticsManager() {
@@ -52,8 +59,7 @@ class GemFireMicrometerBridgeTest {
         field.set(bridge, config);
     }
 
-    private Statistics mockStatistics(String typeName, String textId, long uniqueId,
-                                      StatisticDescriptor... descriptors) {
+    private Statistics mockStatistics(String typeName, String textId, long uniqueId, StatisticDescriptor... descriptors) {
         Statistics stats = mock(Statistics.class);
         StatisticsType type = mock(StatisticsType.class);
         lenient().when(type.getName()).thenReturn(typeName);
@@ -114,10 +120,7 @@ class GemFireMicrometerBridgeTest {
         setExportConfig(Map.of("CachePerfStats", "RegionStats-Orders|puts"));
         bridge.rescan();
 
-        Meter meter = registry.find("gemfire.cacheperfstats.puts")
-                .tag("category", "CachePerfStats")
-                .tag("name", "RegionStats-Orders")
-                .meter();
+        Meter meter = registry.find("gemfire.cacheperfstats.puts").tag("category", "CachePerfStats").tag("name", "RegionStats-Orders").meter();
         assertNotNull(meter, "Meter should have correct tags");
     }
 
@@ -142,9 +145,7 @@ class GemFireMicrometerBridgeTest {
         bridge.rescan();
         bridge.rescan();
 
-        long count = registry.getMeters().stream()
-                .filter(m -> m.getId().getName().equals("gemfire.cacheperfstats.gets"))
-                .count();
+        long count = registry.getMeters().stream().filter(m -> m.getId().getName().equals("gemfire.cacheperfstats.gets")).count();
         assertEquals(1, count, "Should only register the metric once");
     }
 
@@ -162,8 +163,7 @@ class GemFireMicrometerBridgeTest {
         bridge.rescan();
 
         assertNotNull(registry.find("gemfire.cacheperfstats.gets").meter());
-        assertNull(registry.find("gemfire.poolstats.gets").meter(),
-                "PoolStats should not match Cache.* regex");
+        assertNull(registry.find("gemfire.poolstats.gets").meter(), "PoolStats should not match Cache.* regex");
     }
 
     @Test
@@ -179,11 +179,8 @@ class GemFireMicrometerBridgeTest {
         setExportConfig(Map.of("CachePerfStats", ".*Orders|gets"));
         bridge.rescan();
 
-        assertNotNull(registry.find("gemfire.cacheperfstats.gets")
-                .tag("name", "RegionStats-Orders").meter());
-        assertNull(registry.find("gemfire.cacheperfstats.gets")
-                .tag("name", "RegionStats-Prices").meter(),
-                "Prices instance should not match .*Orders regex");
+        assertNotNull(registry.find("gemfire.cacheperfstats.gets").tag("name", "RegionStats-Orders").meter());
+        assertNull(registry.find("gemfire.cacheperfstats.gets").tag("name", "RegionStats-Prices").meter(), "Prices instance should not match .*Orders regex");
     }
 
     @Test
@@ -202,8 +199,7 @@ class GemFireMicrometerBridgeTest {
 
         assertNotNull(registry.find("gemfire.cacheperfstats.gets").meter());
         assertNotNull(registry.find("gemfire.cacheperfstats.puts").meter());
-        assertNull(registry.find("gemfire.cacheperfstats.misses").meter(),
-                "misses should not be exported since it's not in the filter");
+        assertNull(registry.find("gemfire.cacheperfstats.misses").meter(), "misses should not be exported since it's not in the filter");
     }
 
     @Test
@@ -218,9 +214,7 @@ class GemFireMicrometerBridgeTest {
         setExportConfig(Map.of("CachePerfStats", "gets"));
         bridge.rescan();
 
-        Meter meter = registry.find("gemfire.cacheperfstats.gets")
-                .tag("name", "default")
-                .meter();
+        Meter meter = registry.find("gemfire.cacheperfstats.gets").tag("name", "default").meter();
         assertNotNull(meter, "Null textId should produce tag name=default");
     }
 
@@ -252,8 +246,7 @@ class GemFireMicrometerBridgeTest {
         setExportConfig(Map.of("CachePerfStats", "gets"));
         bridge.rescan();
 
-        assertNotNull(registry.find("gemfire.cacheperfstats.gets").meter(),
-                "Should match any instance when no pipe in config");
+        assertNotNull(registry.find("gemfire.cacheperfstats.gets").meter(), "Should match any instance when no pipe in config");
     }
 
     @Test

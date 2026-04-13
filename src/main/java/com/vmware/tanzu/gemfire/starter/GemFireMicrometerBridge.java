@@ -4,16 +4,12 @@ import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tags;
-import jakarta.annotation.PostConstruct;
 import org.apache.geode.StatisticDescriptor;
 import org.apache.geode.Statistics;
 import org.apache.geode.cache.client.ClientCache;
 import org.apache.geode.distributed.internal.InternalDistributedSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,15 +26,13 @@ public class GemFireMicrometerBridge {
     private final ClientCache clientCache;
     private final MeterRegistry registry;
     private final Set<String> bound = new HashSet<>();
-    @Value("${gemfire.metrics.bridge.rescan-interval:30000}")
-    private long rescanInterval;
-    @Autowired
-    @Qualifier("gemfireBridgeExports")
-    private Map<String, String> exportConfig;
+    private final Map<String, String> exportConfig;
 
-    public GemFireMicrometerBridge(ClientCache clientCache, MeterRegistry registry) {
+    public GemFireMicrometerBridge(ClientCache clientCache, MeterRegistry registry, GemFireMetricBridgeProperties gemFireMetricBridgeProperties) {
         this.clientCache = clientCache;
         this.registry = registry;
+        this.exportConfig = gemFireMetricBridgeProperties.getExport();
+        log.info("GemFireMicroMeterBridge enabled - rescan-interval: {} exports: {}", gemFireMetricBridgeProperties.getRescanInterval(), exportConfig);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -46,12 +40,7 @@ public class GemFireMicrometerBridge {
         rescan();
     }
 
-    @PostConstruct
-    public void init() {
-        log.info("GemFireMicroMeterBridge enabled - rescan-interval: {} exports: {}", rescanInterval, exportConfig);
-    }
-
-    @Scheduled(fixedDelayString = "${gemfire.metrics.bridge.rescan-interval:30000}")
+    @Scheduled(fixedRateString = "#{@gemFireMetricBridgeProperties.rescanInterval}")
     public void rescan() {
         if (exportConfig.isEmpty()) {
             log.debug("Rescan skipped: exportConfig is empty.");

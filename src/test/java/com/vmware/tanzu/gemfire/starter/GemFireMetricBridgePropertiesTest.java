@@ -2,17 +2,24 @@ package com.vmware.tanzu.gemfire.starter;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class GemFireMetricBridgePropertiesTest {
 
     @Test
-    void exportDefaultsToEmptyMap() {
+    void exportDefaults() {
+        HashMap<String, String> defaultExport = new HashMap<>(
+                Map.of("CachePerfStats", "cachePerfStats|gets,getTime,puts,putTime")
+        );
+
         GemFireMetricBridgeProperties props = new GemFireMetricBridgeProperties();
+
         assertNotNull(props.getExport());
-        assertTrue(props.getExport().isEmpty());
+        assertEquals(props.getExport(), defaultExport);
     }
 
     @Test
