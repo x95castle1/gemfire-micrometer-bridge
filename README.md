@@ -3,16 +3,16 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen)](https://spring.io/projects/spring-boot)
 [![GemFire](https://img.shields.io/badge/GemFire-10.x-blue)](https://tanzu.vmware.com/gemfire)
 
-A Spring Boot Starter that bridges **VMware by Broadcom GemFire** internal statistics into the **Micrometer** ecosystem. Surface your client-side latency, pool usage, and cache performance metrics directly to **Prometheus** and **JMX** with zero boilerplate.
+A Spring Boot Starter that bridges **VMware by Broadcom GemFire** internal statistics into the **Micrometer** ecosystem. Surface your client-side GemFire statistic metrics directly to **Prometheus** and **JMX** with zero boilerplate.
 
 ---
 
 ## 🚀 Features
 
-* **Dynamic Rescanning**: Automatically detects new Regions, Pools, or CQs created after application startup.
 * **Regex Filtering**: Fine-grained control over which `StatisticsTypes`, `Instances`, and `Descriptors` are exported via standard properties.
 * **Smart Mapping**: Automatically converts GemFire Counters to Micrometer `FunctionCounters` and Gauges to standard `Gauges`.
 * **Multi-Backend Support**: Broadcasts metrics to Prometheus (pull-based) and JMX (push-based) simultaneously through the Micrometer Composite Registry.
+* **Dynamic Rescanning**: Automatically detects new Regions, Pools, or CQs created after application startup.
 
 ---
 
@@ -20,10 +20,11 @@ A Spring Boot Starter that bridges **VMware by Broadcom GemFire** internal stati
 
 ### 1. Build and Publish
 
-In the root of the gemfire-micrometer-bridge  project, run:
+In the root of the gemfire-micrometer-bridge  project, run to build the jar and publish to your .m2 repository:
 ```makefile
 make publish
 ```
+You can also use the Makefile to build, test, or run code coverage. See `make help` for more information.
 
 ### 2. Add Dependency to GemFire client
 Add the following to your GemFire Client application's build.gradle:
@@ -60,7 +61,7 @@ or Pom.xml if you love Maven!
 
 ## 🛠 Usage
 ### 1. Configure Metrics
-Control exactly what gets exported via application.properties.
+Control exactly what gets exported via application.properties. 
 * **Format:** 'TypeRegex' : 'StatNameRegex | Stat1,Stat2,Stat3'
 * **Default:** "CachePerfStats", "cachePerfStats|gets,getTime,puts,putTime"
 
@@ -70,15 +71,15 @@ Control exactly what gets exported via application.properties.
 # example to only select gets,puts,putTime,getTime metrics for the stat type of RegionStats-Example
 gemfire.metrics.bridge.export.CachePerfStats=RegionStats-Example|gets,puts,putTime,getTime
 
+# single line example to pull all metrics for type of CachePerfStats
+gemfire.metrics.bridge.export.CachePerfStats=.*|.*
+
 # multi-stat example to pull all stats for type of CachePerfStats, PoolStats, and ClientStats
 gemfire.metrics.bridge.export.CachePerfStats=.*|.*
 gemfire.metrics.bridge.export.PoolStats=.*|.*
 gemfire.metrics.bridge.export.ClientStats=.*|.*
 
-# single line example to pull all metrics for type of CachePerfStats
-gemfire.metrics.bridge.export.CachePerfStats=.*|.*
 ```
-
 
 ## Additional Properties
 You can adjust the rescanning of statistics or disable the bridge entirely via the application.properties with the following properties:
@@ -123,12 +124,12 @@ gemfire_cacheperfstats_puttime_total{category="CachePerfStats",name="cachePerfSt
 ```
 
 ### JMX (JConsole / VisualVM)
-Metrics are pushed to the MBean server under the metrics domain. <br>
+Metrics are pushed to the MBean server under the metrics domain. Example from VisualVM: 
 
-TODO: Add in a cool picture
+![jmx-example](images/jmx-example.png)
 
 ## 🛠 Troubleshooting
-**Log Levels:** DEBUG and TRACE Logging Levels are supported. 
+**Log Levels:** DEBUG and TRACE Logging Levels are supported and will log useful information to troubleshoot.
 
 **Regex Debugging:** Set logging.level.com.vmware.tanzu.gemfire.starter=DEBUG to see exactly which metric Type and Names the bridge is finding during its rescan.
 
