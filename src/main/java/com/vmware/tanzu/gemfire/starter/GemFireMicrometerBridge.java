@@ -75,15 +75,14 @@ public class GemFireMicrometerBridge {
 
     private void processStatisticsInstance(Statistics stats, String configFilter) {
         String textId = stats.getTextId() == null ? "default" : stats.getTextId();
-        String[] parts = configFilter.split("\\|");
+
+        String[] parts = configFilter.split("::");
         String instanceRegex = parts.length > 1 ? parts[0] : ".*";
         String statsRegex = parts.length > 1 ? parts[1] : parts[0];
 
         if (Pattern.matches(instanceRegex, textId)) {
-            log.debug("Instance match: '{}' matches instance filter '{}'. Scanning descriptors...", textId, instanceRegex);
+            log.debug("Instance match: '{}' matches filter '{}'", textId, instanceRegex);
             bindMatchedStats(stats, statsRegex);
-        } else {
-            log.trace("Instance skip: '{}' did not match filter '{}'", textId, instanceRegex);
         }
     }
 

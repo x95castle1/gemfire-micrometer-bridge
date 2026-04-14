@@ -85,7 +85,7 @@ class GemFireMicrometerBridgeTest {
         when(stats.get(gets)).thenReturn(42L);
         when(statisticsManager.getStatsList()).thenReturn(List.of(stats));
 
-        setExportConfig(Map.of("CachePerfStats", "cachePerfStats|gets"));
+        setExportConfig(Map.of("CachePerfStats", "cachePerfStats::gets"));
         bridge.rescan();
 
         FunctionCounter counter = registry.find("gemfire.cacheperfstats.gets").functionCounter();
@@ -101,7 +101,7 @@ class GemFireMicrometerBridgeTest {
         when(stats.get(connections)).thenReturn(5L);
         when(statisticsManager.getStatsList()).thenReturn(List.of(stats));
 
-        setExportConfig(Map.of("PoolStats", "myPool|connections"));
+        setExportConfig(Map.of("PoolStats", "myPool::connections"));
         bridge.rescan();
 
         Gauge gauge = registry.find("gemfire.poolstats.connections").gauge();
@@ -117,7 +117,7 @@ class GemFireMicrometerBridgeTest {
         lenient().when(stats.get(puts)).thenReturn(100L);
         when(statisticsManager.getStatsList()).thenReturn(List.of(stats));
 
-        setExportConfig(Map.of("CachePerfStats", "RegionStats-Orders|puts"));
+        setExportConfig(Map.of("CachePerfStats", "RegionStats-Orders::puts"));
         bridge.rescan();
 
         Meter meter = registry.find("gemfire.cacheperfstats.puts").tag("category", "CachePerfStats").tag("name", "RegionStats-Orders").meter();
@@ -141,7 +141,7 @@ class GemFireMicrometerBridgeTest {
         lenient().when(stats.get(gets)).thenReturn(10L);
         when(statisticsManager.getStatsList()).thenReturn(List.of(stats));
 
-        setExportConfig(Map.of("CachePerfStats", "cachePerfStats|gets"));
+        setExportConfig(Map.of("CachePerfStats", "cachePerfStats::gets"));
         bridge.rescan();
         bridge.rescan();
 
@@ -159,7 +159,7 @@ class GemFireMicrometerBridgeTest {
         when(statisticsManager.getStatsList()).thenReturn(List.of(cacheStats, poolStats));
 
         // Regex that matches only CachePerfStats
-        setExportConfig(Map.of("Cache.*", ".*|gets"));
+        setExportConfig(Map.of("Cache.*", ".*::gets"));
         bridge.rescan();
 
         assertNotNull(registry.find("gemfire.cacheperfstats.gets").meter());
@@ -176,7 +176,7 @@ class GemFireMicrometerBridgeTest {
         when(statisticsManager.getStatsList()).thenReturn(List.of(ordersStats, pricesStats));
 
         // Only match instances with "Orders" in the textId
-        setExportConfig(Map.of("CachePerfStats", ".*Orders|gets"));
+        setExportConfig(Map.of("CachePerfStats", ".*Orders::gets"));
         bridge.rescan();
 
         assertNotNull(registry.find("gemfire.cacheperfstats.gets").tag("name", "RegionStats-Orders").meter());
@@ -226,7 +226,7 @@ class GemFireMicrometerBridgeTest {
         lenient().when(stats.get(desc)).thenReturn(0L);
         when(statisticsManager.getStatsList()).thenReturn(List.of(stats));
 
-        setExportConfig(Map.of("Cache-Perf:Stats", "test|get_Time"));
+        setExportConfig(Map.of("Cache-Perf:Stats", "test::get_Time"));
         bridge.rescan();
 
         // Underscores -> dots, colons -> dots, hyphens -> dots, all lowercase
@@ -253,7 +253,7 @@ class GemFireMicrometerBridgeTest {
     void rescanHandlesExceptionGracefully() throws Exception {
         when(clientCache.getDistributedSystem()).thenThrow(new RuntimeException("connection lost"));
 
-        setExportConfig(Map.of("CachePerfStats", ".*|gets"));
+        setExportConfig(Map.of("CachePerfStats", ".*::gets"));
 
         assertDoesNotThrow(() -> bridge.rescan());
         assertTrue(registry.getMeters().isEmpty());
@@ -271,8 +271,8 @@ class GemFireMicrometerBridgeTest {
         when(statisticsManager.getStatsList()).thenReturn(List.of(cacheStats, poolStats));
 
         Map<String, String> config = new HashMap<>();
-        config.put("CachePerfStats", ".*|gets");
-        config.put("PoolStats", ".*|connections");
+        config.put("CachePerfStats", ".*::gets");
+        config.put("PoolStats", ".*::connections");
         setExportConfig(config);
         bridge.rescan();
 
