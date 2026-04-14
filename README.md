@@ -125,7 +125,7 @@ gemfire_cacheperfstats_puts_total{category="CachePerfStats",name="cachePerfStats
 gemfire_cacheperfstats_puttime_total{category="CachePerfStats",name="cachePerfStats"} 4.203863011E9
 ```
 
-### JMX (JConsole / VisualVM)
+### JMX (VisualVM)
 Metrics are pushed to the MBean server under the metrics domain. Example from VisualVM: 
 
 ![jmx-example](images/jmx-example.png)
