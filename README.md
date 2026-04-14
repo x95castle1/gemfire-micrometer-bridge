@@ -3,7 +3,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.0-brightgreen)](https://spring.io/projects/spring-boot)
 [![GemFire](https://img.shields.io/badge/GemFire-10.x-blue)](https://tanzu.vmware.com/gemfire)
 
-A Spring Boot Starter that bridges **VMware by Broadcom GemFire** internal statistics into the **Micrometer** ecosystem. Surface your client-side GemFire statistic metrics directly to **Prometheus** and **JMX** with zero boilerplate.
+A Spring Boot Starter that bridges **GemFire** internal statistics into the **Micrometer** ecosystem. Surface your client-side GemFire statistic metrics directly to **Prometheus** and **JMX** with zero boilerplate.
 
 ---
 
