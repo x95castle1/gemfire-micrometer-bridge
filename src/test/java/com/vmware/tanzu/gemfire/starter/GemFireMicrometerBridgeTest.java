@@ -184,6 +184,31 @@ class GemFireMicrometerBridgeTest {
     }
 
     @Test
+    void pipeWorksAsRegexOrInStatsWithoutLeakingIntoInstanceFilter() throws Exception {
+        wireUpStatisticsManager();
+        StatisticDescriptor gets = mockDescriptor("gets", true);
+        StatisticDescriptor puts = mockDescriptor("puts", true);
+        Statistics ordersStats = mockStatistics("CachePerfStats", "RegionStats-Orders", 1, gets, puts);
+        Statistics pricesStats = mockStatistics("CachePerfStats", "RegionStats-Prices", 2, gets, puts);
+        lenient().when(ordersStats.get(gets)).thenReturn(1L);
+        lenient().when(ordersStats.get(puts)).thenReturn(2L);
+        when(statisticsManager.getStatsList()).thenReturn(List.of(ordersStats, pricesStats));
+
+        // | is regex OR for stats, :: separates instance filter from stats filter
+        setExportConfig(Map.of("CachePerfStats", ".*Orders::gets|puts"));
+        bridge.rescan();
+
+        // Orders instance: both gets and puts should be registered
+        assertNotNull(registry.find("gemfire.cacheperfstats.gets").tag("name", "RegionStats-Orders").meter());
+        assertNotNull(registry.find("gemfire.cacheperfstats.puts").tag("name", "RegionStats-Orders").meter());
+        // Prices instance: nothing should leak through
+        assertNull(registry.find("gemfire.cacheperfstats.gets").tag("name", "RegionStats-Prices").meter(),
+                "Pipe should not cause instance filter to be bypassed");
+        assertNull(registry.find("gemfire.cacheperfstats.puts").tag("name", "RegionStats-Prices").meter(),
+                "Pipe should not cause instance filter to be bypassed");
+    }
+
+    @Test
     void multipleStatDescriptorsAreFilteredByCommaList() throws Exception {
         wireUpStatisticsManager();
         StatisticDescriptor gets = mockDescriptor("gets", true);
@@ -194,7 +219,7 @@ class GemFireMicrometerBridgeTest {
         lenient().when(stats.get(puts)).thenReturn(2L);
         when(statisticsManager.getStatsList()).thenReturn(List.of(stats));
 
-        setExportConfig(Map.of("CachePerfStats", "cachePerfStats|gets,puts"));
+        setExportConfig(Map.of("CachePerfStats", "cachePerfStats::gets,puts"));
         bridge.rescan();
 
         assertNotNull(registry.find("gemfire.cacheperfstats.gets").meter());
@@ -210,7 +235,7 @@ class GemFireMicrometerBridgeTest {
         lenient().when(stats.get(gets)).thenReturn(7L);
         when(statisticsManager.getStatsList()).thenReturn(List.of(stats));
 
-        // With no pipe, the config is treated as stats regex with instance=.*
+        // With no ::, the config is treated as stats regex with instance=.*
         setExportConfig(Map.of("CachePerfStats", "gets"));
         bridge.rescan();
 
@@ -235,14 +260,14 @@ class GemFireMicrometerBridgeTest {
     }
 
     @Test
-    void configFilterWithoutPipeTreatsEntireValueAsStatsRegex() throws Exception {
+    void configFilterWithoutDelimiterTreatsEntireValueAsStatsRegex() throws Exception {
         wireUpStatisticsManager();
         StatisticDescriptor gets = mockDescriptor("gets", true);
         Statistics stats = mockStatistics("CachePerfStats", "anyInstance", 1, gets);
         lenient().when(stats.get(gets)).thenReturn(1L);
         when(statisticsManager.getStatsList()).thenReturn(List.of(stats));
 
-        // No pipe -> instanceRegex defaults to ".*", statsRegex = "gets"
+        // No :: -> instanceRegex defaults to ".*", statsRegex = "gets"
         setExportConfig(Map.of("CachePerfStats", "gets"));
         bridge.rescan();
 
