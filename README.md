@@ -134,5 +134,3 @@ Metrics are pushed to the MBean server under the metrics domain. Example from Vi
 **Log Levels:** DEBUG and TRACE Logging Levels are supported and will log useful information to troubleshoot.
 
 **Regex Debugging:** Set logging.level.com.vmware.tanzu.gemfire.starter=DEBUG to see exactly which metric Type and Names the bridge is finding during its rescan.
-
-**Empty Map:** If your debug logs show exportConfig is {}, check the single quotes and backslashes in your application.properties file.
