@@ -64,8 +64,8 @@ or Pom.xml if you love Maven!
 ## 🛠 Usage
 ### 1. Configure Metrics
 Control exactly what gets exported via application.properties. 
-* **Format:** 'TypeRegex' : 'StatNameRegex | Stat1,Stat2,Stat3'
-* **Default:** "CachePerfStats", "cachePerfStats|gets,getTime,puts,putTime"
+* **Format:** 'TypeRegex' : 'StatNameRegex :: Stat1,Stat2,Stat3'
+* **Default:** "CachePerfStats", "cachePerfStats::gets,getTime,puts,putTime"
 
 ```properties
 # application.properties 
@@ -73,8 +73,8 @@ Control exactly what gets exported via application.properties.
 # example to only select gets,puts,putTime,getTime metrics for the stat type of RegionStats-Example
 gemfire.metrics.bridge.export.CachePerfStats=RegionStats-Example|gets,puts,putTime,getTime
 
-# single line example to pull all metrics for type of CachePerfStats
-gemfire.metrics.bridge.export.CachePerfStats=.*|.*
+# single line example to pull all metrics for type of CachePerfStats and RegionStats-Example
+gemfire.metrics.bridge.export.CachePerfStats=(RegionStats-Example|cachePerfStats)::.*
 
 # multi-stat example to pull all stats for type of CachePerfStats, PoolStats, and ClientStats
 gemfire.metrics.bridge.export.CachePerfStats=.*|.*
