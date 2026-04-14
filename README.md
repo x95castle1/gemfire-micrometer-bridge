@@ -58,6 +58,8 @@ or Pom.xml if you love Maven!
     </dependency>
 </dependencies>
 ```
+**Note:** Only include registries that you want to use to emit metrics. For example, if you don't want JMX to be enabled then don't include the `dependency micrometer-registry-jmx`.
+
 
 ## 🛠 Usage
 ### 1. Configure Metrics
