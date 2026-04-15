@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,10 +52,10 @@ class GemFireMicrometerBridgeTest {
         when(distributedSystem.getStatisticsManager()).thenReturn(statisticsManager);
     }
 
-    private void setExportConfig(Map<String, String> config) throws Exception {
-        Field field = GemFireMicrometerBridge.class.getDeclaredField("exportConfig");
-        field.setAccessible(true);
-        field.set(bridge, config);
+    private void setExportConfig(Map<String, String> config) {
+        GemFireMetricBridgeProperties props = new GemFireMetricBridgeProperties();
+        props.setExport(config);
+        bridge = new GemFireMicrometerBridge(clientCache, registry, props);
     }
 
     private Statistics mockStatistics(String typeName, String textId, long uniqueId, StatisticDescriptor... descriptors) {

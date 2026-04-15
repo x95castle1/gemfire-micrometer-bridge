@@ -65,8 +65,20 @@ dependencies {
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        excludeTags 'performance'
+    }
     finalizedBy jacocoTestReport
+}
+
+tasks.register('perfTest', Test) {
+    useJUnitPlatform {
+        includeTags 'performance'
+    }
+    maxHeapSize = '1g'
+    testLogging {
+        showStandardStreams = true
+    }
 }
 
 jacocoTestReport {

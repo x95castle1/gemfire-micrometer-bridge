@@ -17,6 +17,10 @@ coverage: ## run tests and open coverage report
 	@echo "Report: build/reports/jacoco/test/html/index.html"
 	@open build/reports/jacoco/test/html/index.html
 
+.PHONY: perf
+perf: ## run performance test
+	@./gradlew perfTest
+
 .PHONY: publish
 publish: ## install library into local .m2/repo
 	@./gradlew publishToMavenLocal

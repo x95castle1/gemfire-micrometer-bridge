@@ -14,6 +14,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -26,14 +27,32 @@ public class GemFireMicrometerBridge {
     private final ClientCache clientCache;
     private final MeterRegistry registry;
     private final Set<String> bound = new HashSet<>();
-    private final Map<String, String> exportConfig;
+    private final List<ExportFilter> exportFilters;
 
     public GemFireMicrometerBridge(ClientCache clientCache, MeterRegistry registry, GemFireMetricBridgeProperties gemFireMetricBridgeProperties) {
         this.clientCache = clientCache;
         this.registry = registry;
-        this.exportConfig = gemFireMetricBridgeProperties.getExport();
-        log.info("GemFireMicroMeterBridge enabled - rescan-interval: {} exports: {}", gemFireMetricBridgeProperties.getRescanInterval(), exportConfig);
+        this.exportFilters = compileFilters(gemFireMetricBridgeProperties.getExport());
+        log.info("GemFireMicroMeterBridge enabled - rescan-interval: {} exports: {}", gemFireMetricBridgeProperties.getRescanInterval(), gemFireMetricBridgeProperties.getExport());
     }
+
+    private static List<ExportFilter> compileFilters(Map<String, String> exportConfig) {
+        List<ExportFilter> filters = new ArrayList<>();
+        for (Map.Entry<String, String> entry : exportConfig.entrySet()) {
+            Pattern typePattern = Pattern.compile(entry.getKey());
+            String[] parts = entry.getValue().split("::");
+            Pattern instancePattern = Pattern.compile(parts.length > 1 ? parts[0] : ".*");
+            String statsRegex = parts.length > 1 ? parts[1] : parts[0];
+            List<Pattern> statPatterns = new ArrayList<>();
+            for (String p : statsRegex.split(",")) {
+                statPatterns.add(Pattern.compile(p.trim()));
+            }
+            filters.add(new ExportFilter(typePattern, instancePattern, statPatterns));
+        }
+        return filters;
+    }
+
+    private record ExportFilter(Pattern typePattern, Pattern instancePattern, List<Pattern> statPatterns) {}
 
     @EventListener(ApplicationReadyEvent.class)
     public void initialBind() {
@@ -42,7 +61,7 @@ public class GemFireMicrometerBridge {
 
     @Scheduled(fixedRateString = "#{@gemFireMetricBridgeProperties.rescanInterval}")
     public void rescan() {
-        if (exportConfig.isEmpty()) {
+        if (exportFilters.isEmpty()) {
             log.debug("Rescan skipped: exportConfig is empty.");
             return;
         }
@@ -58,10 +77,10 @@ public class GemFireMicrometerBridge {
 
             for (Statistics stats : statsList) {
                 String typeName = stats.getType().getName();
-                for (Map.Entry<String, String> entry : exportConfig.entrySet()) {
-                    if (Pattern.matches(entry.getKey(), typeName)) {
-                        log.trace("Type match found: '{}' matches filter '{}'", typeName, entry.getKey());
-                        processStatisticsInstance(stats, entry.getValue());
+                for (ExportFilter filter : exportFilters) {
+                    if (filter.typePattern().matcher(typeName).matches()) {
+                        log.trace("Type match found: '{}' matches filter '{}'", typeName, filter.typePattern());
+                        processStatisticsInstance(stats, filter);
                         matchCount++;
                     }
                 }
@@ -73,24 +92,19 @@ public class GemFireMicrometerBridge {
         }
     }
 
-    private void processStatisticsInstance(Statistics stats, String configFilter) {
+    private void processStatisticsInstance(Statistics stats, ExportFilter filter) {
         String textId = stats.getTextId() == null ? "default" : stats.getTextId();
 
-        String[] parts = configFilter.split("::");
-        String instanceRegex = parts.length > 1 ? parts[0] : ".*";
-        String statsRegex = parts.length > 1 ? parts[1] : parts[0];
-
-        if (Pattern.matches(instanceRegex, textId)) {
-            log.debug("Instance match: '{}' matches filter '{}'", textId, instanceRegex);
-            bindMatchedStats(stats, statsRegex);
+        if (filter.instancePattern().matcher(textId).matches()) {
+            log.debug("Instance match: '{}' matches filter '{}'", textId, filter.instancePattern());
+            bindMatchedStats(stats, filter);
         }
     }
 
-    private void bindMatchedStats(Statistics stats, String statsRegex) {
-        String[] statPatterns = statsRegex.split(",");
+    private void bindMatchedStats(Statistics stats, ExportFilter filter) {
         for (StatisticDescriptor d : stats.getType().getStatistics()) {
-            for (String pattern : statPatterns) {
-                if (Pattern.matches(pattern.trim(), d.getName())) {
+            for (Pattern pattern : filter.statPatterns()) {
+                if (pattern.matcher(d.getName()).matches()) {
                     registerMeter(stats, d);
                     break;
                 }
