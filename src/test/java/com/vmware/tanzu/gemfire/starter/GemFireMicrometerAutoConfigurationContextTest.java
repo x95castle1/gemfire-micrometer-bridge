@@ -27,25 +27,23 @@ class GemFireMicrometerAutoConfigurationContextTest {
             GemFireMetricBridgeProperties props = context.getBean(GemFireMetricBridgeProperties.class);
 
             assertThat(props.getRescanInterval()).isEqualTo(60000L);
-            assertThat(props.getExport()).containsKey("CachePerfStats");
-            assertThat(props.getExport().get("CachePerfStats"))
-                    .isEqualTo("cachePerfStats|gets,getTime,puts,putTime");
+            assertThat(props.getExport()).isEmpty();
         });
     }
 
     @Test
-    void exportConfigCanBeOverridden() {
+    void exportConfigReplacesDefaults() {
         contextRunner
                 .withPropertyValues(
-                        "gemfire.metrics.bridge.export.PoolStats=.*|connections",
-                        "gemfire.metrics.bridge.export.ClientStats=.*|sentBytes,receivedBytes"
+                        "gemfire.metrics.bridge.export.PoolStats=.*::connections",
+                        "gemfire.metrics.bridge.export.ClientStats=.*::sentBytes,receivedBytes"
                 )
                 .run(context -> {
                     GemFireMetricBridgeProperties props = context.getBean(GemFireMetricBridgeProperties.class);
 
-                    assertThat(props.getExport()).containsKey("PoolStats");
-                    assertThat(props.getExport()).containsKey("ClientStats");
-                    assertThat(props.getExport().get("PoolStats")).isEqualTo(".*|connections");
+                    assertThat(props.getExport()).containsOnlyKeys("PoolStats", "ClientStats");
+                    assertThat(props.getExport().get("PoolStats")).isEqualTo(".*::connections");
+                    assertThat(props.getExport()).doesNotContainKey("CachePerfStats");
                 });
     }
 

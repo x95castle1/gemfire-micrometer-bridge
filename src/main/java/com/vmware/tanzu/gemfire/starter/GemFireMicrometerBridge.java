@@ -29,11 +29,17 @@ public class GemFireMicrometerBridge {
     private final Set<String> bound = new HashSet<>();
     private final List<ExportFilter> exportFilters;
 
+    private static final Map<String, String> DEFAULT_EXPORTS =
+            Map.of("CachePerfStats", "cachePerfStats::gets,getTime,puts,putTime");
+
     public GemFireMicrometerBridge(ClientCache clientCache, MeterRegistry registry, GemFireMetricBridgeProperties gemFireMetricBridgeProperties) {
         this.clientCache = clientCache;
         this.registry = registry;
-        this.exportFilters = compileFilters(gemFireMetricBridgeProperties.getExport());
-        log.info("GemFireMicroMeterBridge enabled - rescan-interval: {} exports: {}", gemFireMetricBridgeProperties.getRescanInterval(), gemFireMetricBridgeProperties.getExport());
+        Map<String, String> effectiveExports = gemFireMetricBridgeProperties.getExport().isEmpty()
+                ? DEFAULT_EXPORTS
+                : gemFireMetricBridgeProperties.getExport();
+        this.exportFilters = compileFilters(effectiveExports);
+        log.info("GemFireMicroMeterBridge enabled - rescan-interval: {} exports: {}", gemFireMetricBridgeProperties.getRescanInterval(), effectiveExports);
     }
 
     private static List<ExportFilter> compileFilters(Map<String, String> exportConfig) {

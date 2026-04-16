@@ -5,9 +5,7 @@ import java.util.Map;
 
 public class GemFireMetricBridgeProperties {
 
-    private Map<String, String> export = new HashMap<>(
-            Map.of("CachePerfStats", "cachePerfStats|gets,getTime,puts,putTime")
-    );
+    private Map<String, String> export = new HashMap<>();
     private Long rescanInterval = 60000L;
 
     public Map<String, String> getExport() {
