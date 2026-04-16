@@ -81,6 +81,9 @@ gemfire.metrics.bridge.export.CachePerfStats=.*::.*
 gemfire.metrics.bridge.export.PoolStats=.*::.*
 gemfire.metrics.bridge.export.ClientStats=.*::.*
 
+# bring in all stats example
+gemfire.metrics.bridge.export.[.*]=.*
+
 ```
 
 ## Additional Properties
